@@ -1,0 +1,17 @@
+#Dashboard {
+    position:absolute;
+    top:0;
+    right:0;
+    width:250px;
+    height:300px;
+    border: 1px solid  grey;
+}
+#Dashboard h1 {
+    display: inline-block;
+}
+
+#Interventions {
+    position: absolute;
+    top: 300px;
+    right: 0;
+}

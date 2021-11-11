@@ -6,15 +6,21 @@
     const FrameDelayMillis = 10;
 
     // Epidemiology
-    const POPULATION_SIZE = 100;
+    const POPULATION_SIZE = 500;
     const OVERALL_COMPLIANCE = 0.95;
     const TRANSMISSIBILITY = .5;
+    const MORTALITY = .1;
+    const DURATION_INFECTED = 10;
+
+    // Measures;
+    const VACCINATIONS_PER_DAY = 2;
 
     // Rendering
     const WIDTH = 800;
     const HEIGHT = 800;
 
     var sim;
+    var day = 0;
 
     function InitWorld() {
         let sim = new Simulation();
@@ -47,7 +53,8 @@
             this.vaccinated = false;
             this.tested = false;
 
-            this.cyclesSinceInfection = 0;
+            this.dayOfInfection = 0;
+            this.dayOfVaccination =  Number.MAX_VALUE;;
         }
     }
 
@@ -59,8 +66,22 @@
             this.location = location;
             this.mobility = mobility;
         }
+        setVaccinationDay(vDay) {
+            this.c19status.dayOfVaccination = vDay;
+        }
+        setVaccinated() {
+            // console.log(this.c19status.dayOfVaccination);
+            if (this.c19status.dayOfVaccination < day) {
+                this.c19status.vaccinated = true;
+            }
+        }
         setInfected() {
             this.c19status.infected = true;
+            this.c19status.dayOfInfection = Math.floor(day);
+        }
+        setConvalesced() {
+            this.c19status.infected = false;
+            this.c19status.convalesced = true;
         }
 
         Distance(other_person) {
@@ -121,6 +142,18 @@
 
         }
 
+        VaccinateAll() {
+            
+            var i  = 0;
+            for (var p of this.personList.filter(x => ! x.c19status.convalesced)) {
+                i++;
+                var d = Math.floor(i / VACCINATIONS_PER_DAY);
+                // console.log('Booking v date for', d);
+                p.setVaccinationDay(d);
+            }
+
+        }
+
         ImposeQuarantine() {
             for (var i of this.personList.filter(x => x.c19status.infected)) {
                 let compliance = Math.random();
@@ -132,6 +165,9 @@
         }
 
         Update(dt) {
+
+            day += dt;
+
             // Let the population move around
             for (var p of this.personList) {
                 p.location.x += dt * p.mobility.dx;
@@ -151,25 +187,38 @@
             // Infection / spread.
             // changes of subject's covid19status
             // loop through infectious
-            for (var i of this.personList.filter(p => p.c19status.infected)) {
-                // update infection age
-                i.c19status.cyclesSinceInfection += 1;
-                // 10 seconds
-                if (i.c19status.cyclesSinceInfection > dt * 100000) {
-                    this.RemovePerson(i);
-                    // console.log(i);
-                }
+            for (var p of this.personList) {
+                
+                // only from the perspective of infectious ones
+                if (p.c19status.infected) {
 
-                // loop through succeptible ones
-                for (var s of this.personList.filter(p => ! p.c19status.infected)) {
-                    // console.log('inf:', i, 'succ', s);
-                    // get distance
-                    // console.log(i.Distance(s));
-                    if (i.Distance(s) < 5) {
-                        s.setInfected();
-                        // console('I!');
+                    // loop through succeptible ones
+                    for (var s of this.personList.filter(
+                        x => ! (x.c19status.infected || x.c19status.convalesced || x.c19status.vaccinated)
+                        )) {
+                        // console.log('inf:', i, 'succ', s);
+                        // get distance
+                        // console.log(i.Distance(s));
+                        if (p.Distance(s) < 5) {
+                            s.setInfected();
+                            // console('I!');
+                        }
+                    }
+
+                    // update health statuses of infected
+                    if (p.c19status.dayOfInfection + DURATION_INFECTED < day) {
+                        // dies
+                        if (Math.random() < MORTALITY) {
+                            this.RemovePerson(p);
+                        } else {
+                            p.setConvalesced();
+                        }
+                        // console.log(i);
                     }
                 }
+                // in case someone changes the vacc status
+                p.setVaccinated();
+
             }
         }
     }
@@ -182,12 +231,20 @@
         context.strokeStyle = '#03f';
         context.lineWidth = 2;
         const pixelRadius = 5;
+        
         const colorNotInfected = '#fff';
         const colorInfected = '#f00';
+        const colorConvalesced  = '#090';
+        const colorVaccinated = '#333';
 
         for (let p of sim.personList) {
+
             if (p.c19status.infected) {
                 context.fillStyle = colorInfected;
+            }  else if (p.c19status.convalesced) {
+                context.fillStyle = colorConvalesced;
+            }  else if (p.c19status.vaccinated) {
+                context.fillStyle = colorVaccinated;
             } else {
                 context.fillStyle = colorNotInfected;
             }
@@ -199,8 +256,11 @@
         }
 
         // dashboard
-        var dashboard = document.getElementById('Dashboard');
-        dashboard.innerText = sim.StatsInfections();
+        var prevalence = document.getElementById('Prevalence');
+        prevalence.innerText = sim.StatsInfections();
+
+        //  days
+        document.getElementById('Days').innerText = Math.floor(day);
 
     }
 
@@ -259,6 +319,11 @@
         document.getElementById('Quarantine').addEventListener(
             'click',
             function(){ sim.ImposeQuarantine(); }
+        );
+
+        document.getElementById('VaccinateAll').addEventListener(
+            'click',
+            function(){ sim.VaccinateAll(); }
         );
 
         AnimationFrame();

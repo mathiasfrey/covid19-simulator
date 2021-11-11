@@ -4,6 +4,8 @@
         <meta charset="utf-8">
         <title>Covid-19 Simulator</title>
         <script src="covid19.js"></script>
+        <link rel="stylesheet" href="style.css">
+        
     </head>
 
     <body>
@@ -15,15 +17,25 @@
 
         <div>
             <canvas id="SimCanvas" width="800" height="800" style="border: 2px solid rgb(103, 57, 160);"></canvas>
+            <button id="Restart">Restart simulation</button>
         </div>
 
-        <div>
-            <button id="Restart">Restart simulation</button>
+        <div id="Interventions">
+            <h1>Medical measures</h1>#
+            Start vaccination programme:
+            <button id="VaccinateAll">Compulsory</button>
+            <button id="VaccinateChoice">Voluntary</button>
+            <button id="VaccinateRisk">Focused on risk group</button>
+            <h2>NPI</h2>
             <button id="Quarantine">Quarantine all tested positive</button>
+            <button id="Facemask">Wear face masks in public</button>
         </div>
 
         <div id="Dashboard">
-            incidence
+            <h1>Days passed</h1>
+            <span id="Days"></span>
+            <h1>Prevalence</h1>
+            <span id="Prevalence"></span>
         </div>
 
     </body>
